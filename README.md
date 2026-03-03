@@ -115,7 +115,8 @@ The app now includes an **Acting Hours Tracker** for union-limit planning.
   - top-level array of entry objects, or
   - object containing `entries` array
 - Import behavior:
-  - merges into current tracker data
+  - shows an import preview before applying
+  - merges into current tracker data after confirmation
   - skips duplicates by `date + hours + note`
   - ignores invalid rows
 

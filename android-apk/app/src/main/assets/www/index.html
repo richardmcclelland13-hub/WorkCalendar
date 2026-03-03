@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Suncor Shift Calendar</title>
   <meta name="theme-color" content="#183153">
-  <link rel="manifest" href="manifest.json?v=20260303b">
-  <link rel="stylesheet" href="styles.css?v=20260303b">
+  <link rel="manifest" href="manifest.json?v=20260303c">
+  <link rel="stylesheet" href="styles.css?v=20260303c">
 </head>
 <body>
   <div class="bg-grid"></div>
@@ -236,6 +236,21 @@
     </footer>
   </section>
 
+  <section id="trackerImportPreviewSheet" class="acting-entry-sheet hidden" aria-modal="true" role="dialog">
+    <header class="editor-head">
+      <h3>Import Preview</h3>
+      <button id="trackerImportPreviewCloseBtn" class="btn ghost compact" type="button">Close</button>
+    </header>
+
+    <p id="trackerImportPreviewSummary" class="editor-subtitle">Review import results before merging.</p>
+    <div id="trackerImportPreviewList" class="tracker-import-list"></div>
+
+    <footer class="acting-entry-actions">
+      <button id="trackerImportPreviewCancelBtn" class="btn ghost" type="button">Cancel</button>
+      <button id="trackerImportPreviewConfirmBtn" class="btn solid" type="button">Import Entries</button>
+    </footer>
+  </section>
+
   <button id="settingsBtn" class="settings-fab" type="button" aria-controls="settingsPanel">Settings</button>
   <section id="settingsPanel" class="settings-panel hidden" aria-modal="true" role="dialog">
     <header class="settings-head">
@@ -274,8 +289,8 @@
     </div>
   </section>
 
-  <script src="tracker-db.js?v=20260303b"></script>
-  <script src="tracker.js?v=20260303b"></script>
-  <script src="app.js?v=20260303b"></script>
+  <script src="tracker-db.js?v=20260303c"></script>
+  <script src="tracker.js?v=20260303c"></script>
+  <script src="app.js?v=20260303c"></script>
 </body>
 </html>

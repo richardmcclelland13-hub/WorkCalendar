@@ -738,6 +738,38 @@ input[type="date"],
   justify-content: flex-end;
 }
 
+.tracker-import-list {
+  display: grid;
+  gap: 8px;
+}
+
+.tracker-import-block {
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+  padding: 9px;
+  background: color-mix(in srgb, var(--card) 90%, #f8fbff);
+  display: grid;
+  gap: 6px;
+}
+
+.tracker-import-block h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.tracker-import-lines {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 4px;
+}
+
+.tracker-import-lines li {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .stats {
   display: grid;
   gap: 8px;

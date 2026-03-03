@@ -172,6 +172,12 @@ const trackerImportInput = document.getElementById('trackerImportInput');
 const trackerExportCsvBtn = document.getElementById('trackerExportCsvBtn');
 const trackerFilterMeta = document.getElementById('trackerFilterMeta');
 const trackerList = document.getElementById('trackerList');
+const trackerImportPreviewSheet = document.getElementById('trackerImportPreviewSheet');
+const trackerImportPreviewCloseBtn = document.getElementById('trackerImportPreviewCloseBtn');
+const trackerImportPreviewCancelBtn = document.getElementById('trackerImportPreviewCancelBtn');
+const trackerImportPreviewConfirmBtn = document.getElementById('trackerImportPreviewConfirmBtn');
+const trackerImportPreviewSummary = document.getElementById('trackerImportPreviewSummary');
+const trackerImportPreviewList = document.getElementById('trackerImportPreviewList');
 const actingDaySummary = document.getElementById('actingDaySummary');
 const actingDayAddBtn = document.getElementById('actingDayAddBtn');
 const actingEntrySheet = document.getElementById('actingEntrySheet');
@@ -209,6 +215,7 @@ let actingTotalsByDate = {};
 let trackerActiveUnionStartYear = null;
 let trackerActiveMonth = 'ALL';
 let actingEditingEntryId = null;
+let trackerImportPreviewData = null;
 
 function isAndroidAppWebView() {
   return /ShiftCalendarAndroid\/1\.0/.test(navigator.userAgent || '');
@@ -595,6 +602,7 @@ function setupBrandLogoFallback() {
 
 function openSettings() {
   if (!settingsPanel || !editorBackdrop) return;
+  closeTrackerImportPreviewSheet();
   closeActingEntrySheet();
   closeEditor();
   settingsPanel.classList.remove('hidden');
@@ -867,7 +875,7 @@ function isVisible(element) {
 
 function syncOverlayBackdrop() {
   if (!editorBackdrop) return;
-  const anyPanelOpen = isVisible(dayEditor) || isVisible(settingsPanel) || isVisible(actingEntrySheet);
+  const anyPanelOpen = isVisible(dayEditor) || isVisible(settingsPanel) || isVisible(actingEntrySheet) || isVisible(trackerImportPreviewSheet);
   editorBackdrop.classList.toggle('hidden', !anyPanelOpen);
 }
 
@@ -1064,6 +1072,7 @@ function openActingEntrySheet(options = {}) {
   const entry = options.entry || null;
   const dateIso = typeof options.dateIso === 'string' ? options.dateIso : currentIsoDate();
   resetActingTrackerEntrySheet();
+  closeTrackerImportPreviewSheet();
   closeSettings();
 
   if (entry) {
@@ -1447,12 +1456,18 @@ function parseTrackerJsonText(text) {
 }
 
 function normalizeImportedTrackerEntry(raw) {
-  if (!raw || typeof raw !== 'object') return null;
+  if (!raw || typeof raw !== 'object') {
+    return { entry: null, error: 'Row is not an object.' };
+  }
   const date = String(raw.date ?? raw.Date ?? '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { entry: null, error: 'Invalid or missing date (expected YYYY-MM-DD).' };
+  }
 
   const hours = Number(raw.hours ?? raw.Hours ?? raw.HOURS ?? '');
-  if (!Number.isFinite(hours) || hours <= 0) return null;
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return { entry: null, error: 'Invalid or missing hours (must be > 0).' };
+  }
 
   const note = String(raw.note ?? raw.Note ?? '').trim().slice(0, 120);
   const createdCandidate = raw.createdAt ?? raw.created_at ?? raw.CreatedAt ?? '';
@@ -1465,10 +1480,13 @@ function normalizeImportedTrackerEntry(raw) {
   }
 
   return {
-    date,
-    hours: Math.round(hours * 100) / 100,
-    note,
-    createdAt,
+    entry: {
+      date,
+      hours: Math.round(hours * 100) / 100,
+      note,
+      createdAt,
+    },
+    error: '',
   };
 }
 
@@ -1522,46 +1540,8 @@ async function importTrackerEntriesFromFile(file) {
       window.alert('No importable entries found. Expected CSV columns: date,hours,note,createdAt or a JSON entries array.');
       return;
     }
-
-    const nowIso = new Date().toISOString();
-    const existingFingerprints = new Set(actingEntries.map((entry) => trackerEntryFingerprint(entry)));
-    let added = 0;
-    let duplicates = 0;
-    let invalid = 0;
-    let failed = 0;
-
-    for (const rawEntry of importedRaw) {
-      const safe = normalizeImportedTrackerEntry(rawEntry);
-      if (!safe) {
-        invalid++;
-        continue;
-      }
-
-      const fingerprint = trackerEntryFingerprint(safe);
-      if (existingFingerprints.has(fingerprint)) {
-        duplicates++;
-        continue;
-      }
-      existingFingerprints.add(fingerprint);
-
-      try {
-        await actingTrackerStore.upsert({
-          date: safe.date,
-          hours: safe.hours,
-          note: safe.note,
-          source: 'manual',
-          createdAt: safe.createdAt || nowIso,
-          updatedAt: nowIso,
-        });
-        added++;
-      } catch (err) {
-        failed++;
-        console.error('Failed importing acting tracker row.', err);
-      }
-    }
-
-    await refreshActingAndCalendar();
-    window.alert(`Import complete. Added: ${added}. Duplicates skipped: ${duplicates}. Invalid rows: ${invalid}. Failed writes: ${failed}.`);
+    const preview = buildTrackerImportPreview(importedRaw);
+    openTrackerImportPreviewSheet(preview, String(file.name || 'import file'));
   } catch (err) {
     console.error('Failed to import tracker file.', err);
     window.alert('Import failed. Please use CSV or JSON and try again.');
@@ -1570,6 +1550,173 @@ async function importTrackerEntriesFromFile(file) {
       trackerImportInput.value = '';
     }
   }
+}
+
+function buildTrackerImportPreview(importedRaw) {
+  const existingFingerprints = new Set(actingEntries.map((entry) => trackerEntryFingerprint(entry)));
+  const incomingFingerprints = new Set();
+  const validEntries = [];
+  const duplicateEntries = [];
+  const invalidEntries = [];
+
+  importedRaw.forEach((rawEntry, index) => {
+    const row = index + 2;
+    const normalized = normalizeImportedTrackerEntry(rawEntry);
+    if (!normalized.entry) {
+      invalidEntries.push({
+        row,
+        reason: normalized.error || 'Invalid row.',
+      });
+      return;
+    }
+    const entry = normalized.entry;
+    const fingerprint = trackerEntryFingerprint(entry);
+    if (existingFingerprints.has(fingerprint)) {
+      duplicateEntries.push({
+        row,
+        reason: 'Matches an existing entry.',
+        entry,
+      });
+      return;
+    }
+    if (incomingFingerprints.has(fingerprint)) {
+      duplicateEntries.push({
+        row,
+        reason: 'Duplicate within the import file.',
+        entry,
+      });
+      return;
+    }
+    incomingFingerprints.add(fingerprint);
+    validEntries.push({
+      row,
+      entry,
+    });
+  });
+
+  return {
+    validEntries,
+    duplicateEntries,
+    invalidEntries,
+  };
+}
+
+function createImportPreviewBlock(title, lines) {
+  const block = document.createElement('section');
+  block.className = 'tracker-import-block';
+
+  const heading = document.createElement('h4');
+  heading.textContent = title;
+  block.appendChild(heading);
+
+  const list = document.createElement('ul');
+  list.className = 'tracker-import-lines';
+  for (const line of lines) {
+    const item = document.createElement('li');
+    item.textContent = line;
+    list.appendChild(item);
+  }
+  block.appendChild(list);
+  return block;
+}
+
+function renderTrackerImportPreview(preview, sourceName) {
+  if (!trackerImportPreviewSummary || !trackerImportPreviewList || !trackerImportPreviewConfirmBtn) return;
+
+  const ready = preview.validEntries.length;
+  const duplicates = preview.duplicateEntries.length;
+  const invalid = preview.invalidEntries.length;
+  trackerImportPreviewSummary.textContent = `${sourceName}: ${ready} ready, ${duplicates} duplicate, ${invalid} invalid.`;
+
+  trackerImportPreviewList.innerHTML = '';
+
+  const readyLines = preview.validEntries.slice(0, 8).map((item) => {
+    const e = item.entry;
+    const note = e.note ? ` (${e.note})` : '';
+    return `Row ${item.row}: ${e.date} - ${formatActingHours(e.hours)}h${note}`;
+  });
+  if (!readyLines.length) {
+    readyLines.push('No new entries to import.');
+  } else if (preview.validEntries.length > readyLines.length) {
+    readyLines.push(`...and ${preview.validEntries.length - readyLines.length} more ready row(s).`);
+  }
+  trackerImportPreviewList.appendChild(createImportPreviewBlock('Ready To Import', readyLines));
+
+  if (duplicates > 0) {
+    const duplicateLines = preview.duplicateEntries.slice(0, 6).map((item) => {
+      const e = item.entry;
+      return `Row ${item.row}: ${e.date} - ${formatActingHours(e.hours)}h (${item.reason})`;
+    });
+    if (preview.duplicateEntries.length > duplicateLines.length) {
+      duplicateLines.push(`...and ${preview.duplicateEntries.length - duplicateLines.length} more duplicate row(s).`);
+    }
+    trackerImportPreviewList.appendChild(createImportPreviewBlock('Duplicates (Skipped)', duplicateLines));
+  }
+
+  if (invalid > 0) {
+    const invalidLines = preview.invalidEntries.slice(0, 6).map((item) => `Row ${item.row}: ${item.reason}`);
+    if (preview.invalidEntries.length > invalidLines.length) {
+      invalidLines.push(`...and ${preview.invalidEntries.length - invalidLines.length} more invalid row(s).`);
+    }
+    trackerImportPreviewList.appendChild(createImportPreviewBlock('Invalid Rows (Skipped)', invalidLines));
+  }
+
+  trackerImportPreviewConfirmBtn.disabled = ready <= 0;
+}
+
+function openTrackerImportPreviewSheet(preview, sourceName) {
+  if (!trackerImportPreviewSheet) return;
+  trackerImportPreviewData = {
+    sourceName,
+    ...preview,
+  };
+  closeActingEntrySheet();
+  closeEditor();
+  closeSettings();
+  renderTrackerImportPreview(preview, sourceName);
+  trackerImportPreviewSheet.classList.remove('hidden');
+  document.body.classList.add('acting-open');
+  syncOverlayBackdrop();
+}
+
+function closeTrackerImportPreviewSheet() {
+  if (!trackerImportPreviewSheet) return;
+  trackerImportPreviewSheet.classList.add('hidden');
+  document.body.classList.remove('acting-open');
+  trackerImportPreviewData = null;
+  syncOverlayBackdrop();
+}
+
+async function applyTrackerImportPreview() {
+  if (!actingTrackerStore || !trackerImportPreviewData) return;
+  const preview = trackerImportPreviewData;
+  const nowIso = new Date().toISOString();
+  let added = 0;
+  let failed = 0;
+
+  for (const item of preview.validEntries) {
+    const safe = item.entry;
+    try {
+      await actingTrackerStore.upsert({
+        date: safe.date,
+        hours: safe.hours,
+        note: safe.note,
+        source: 'manual',
+        createdAt: safe.createdAt || nowIso,
+        updatedAt: nowIso,
+      });
+      added++;
+    } catch (err) {
+      failed++;
+      console.error('Failed importing acting tracker row.', err);
+    }
+  }
+
+  const duplicates = preview.duplicateEntries.length;
+  const invalid = preview.invalidEntries.length;
+  closeTrackerImportPreviewSheet();
+  await refreshActingAndCalendar();
+  window.alert(`Import complete. Added: ${added}. Duplicates skipped: ${duplicates}. Invalid rows: ${invalid}. Failed writes: ${failed}.`);
 }
 
 function addActingBadge(marksElement, dateKey, tips) {
@@ -1589,6 +1736,7 @@ function openEditor(dateUtc, baseStatus) {
     window.alert('Editor failed to initialize. Please hard refresh the preview.');
     return;
   }
+  closeTrackerImportPreviewSheet();
   closeActingEntrySheet();
   closeSettings();
   editingDateIso = isoDateKey(dateUtc);
@@ -2514,6 +2662,7 @@ async function resetCalendar() {
   applyShiftTheme(calendarShiftForTheme());
   renderQuickEntryButtons();
   closeQuickAddPanel();
+  closeTrackerImportPreviewSheet();
   closeActingEntrySheet();
   await clearActingTrackerData();
   closeEditor();
@@ -2852,6 +3001,14 @@ function wireEvents() {
       event.stopPropagation();
     });
   }
+  if (trackerImportPreviewSheet) {
+    trackerImportPreviewSheet.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+    });
+    trackerImportPreviewSheet.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
   if (closeEditorBtn) {
     closeEditorBtn.addEventListener('click', closeEditor);
   }
@@ -2869,8 +3026,23 @@ function wireEvents() {
       deleteActingEntryById(actingEditingEntryId);
     });
   }
+  if (trackerImportPreviewCloseBtn) {
+    trackerImportPreviewCloseBtn.addEventListener('click', closeTrackerImportPreviewSheet);
+  }
+  if (trackerImportPreviewCancelBtn) {
+    trackerImportPreviewCancelBtn.addEventListener('click', closeTrackerImportPreviewSheet);
+  }
+  if (trackerImportPreviewConfirmBtn) {
+    trackerImportPreviewConfirmBtn.addEventListener('click', () => {
+      applyTrackerImportPreview();
+    });
+  }
   if (editorBackdrop) {
     editorBackdrop.addEventListener('click', () => {
+      if (isVisible(trackerImportPreviewSheet)) {
+        closeTrackerImportPreviewSheet();
+        return;
+      }
       if (isVisible(actingEntrySheet)) {
         closeActingEntrySheet();
         return;
@@ -2886,6 +3058,10 @@ function wireEvents() {
     saveDayBtn.addEventListener('click', saveCurrentOverride);
   }
   document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && trackerImportPreviewSheet && !trackerImportPreviewSheet.classList.contains('hidden')) {
+      closeTrackerImportPreviewSheet();
+      return;
+    }
     if (event.key === 'Escape' && actingEntrySheet && !actingEntrySheet.classList.contains('hidden')) {
       closeActingEntrySheet();
       return;
