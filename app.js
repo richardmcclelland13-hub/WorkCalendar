@@ -167,6 +167,8 @@ const trackerDetails = document.getElementById('trackerDetails');
 const trackerUnionYearFilter = document.getElementById('trackerUnionYearFilter');
 const trackerMonthFilter = document.getElementById('trackerMonthFilter');
 const trackerAddEntryBtn = document.getElementById('trackerAddEntryBtn');
+const trackerImportBtn = document.getElementById('trackerImportBtn');
+const trackerImportInput = document.getElementById('trackerImportInput');
 const trackerExportCsvBtn = document.getElementById('trackerExportCsvBtn');
 const trackerFilterMeta = document.getElementById('trackerFilterMeta');
 const trackerList = document.getElementById('trackerList');
@@ -1345,6 +1347,231 @@ async function exportTrackerCsv() {
   URL.revokeObjectURL(url);
 }
 
+function normalizeCsvHeader(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/_/g, '');
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  const input = String(text || '');
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (input[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        field += char;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inQuotes = true;
+      continue;
+    }
+    if (char === ',') {
+      row.push(field);
+      field = '';
+      continue;
+    }
+    if (char === '\n') {
+      row.push(field);
+      field = '';
+      if (row.some((cell) => String(cell).trim() !== '')) {
+        rows.push(row);
+      }
+      row = [];
+      continue;
+    }
+    if (char === '\r') {
+      continue;
+    }
+    field += char;
+  }
+
+  row.push(field);
+  if (row.some((cell) => String(cell).trim() !== '')) {
+    rows.push(row);
+  }
+  return rows;
+}
+
+function parseTrackerCsvText(text) {
+  const rows = parseCsvRows(text);
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map(normalizeCsvHeader);
+  const indexDate = headers.indexOf('date');
+  const indexHours = headers.indexOf('hours');
+  const indexNote = headers.indexOf('note');
+  const indexCreatedAt = headers.indexOf('createdat');
+
+  if (indexDate < 0 || indexHours < 0) {
+    return [];
+  }
+
+  const entries = [];
+  for (let i = 1; i < rows.length; i++) {
+    const cells = rows[i];
+    entries.push({
+      date: cells[indexDate] || '',
+      hours: cells[indexHours] || '',
+      note: indexNote >= 0 ? cells[indexNote] || '' : '',
+      createdAt: indexCreatedAt >= 0 ? cells[indexCreatedAt] || '' : '',
+    });
+  }
+  return entries;
+}
+
+function parseTrackerJsonText(text) {
+  const parsed = JSON.parse(String(text || '{}'));
+  if (Array.isArray(parsed)) return parsed;
+  if (!parsed || typeof parsed !== 'object') return [];
+  if (Array.isArray(parsed.entries)) return parsed.entries;
+  if (Array.isArray(parsed.actingEntries)) return parsed.actingEntries;
+  if (Array.isArray(parsed.inYearEntries)) return parsed.inYearEntries;
+  return [];
+}
+
+function normalizeImportedTrackerEntry(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const date = String(raw.date ?? raw.Date ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  const hours = Number(raw.hours ?? raw.Hours ?? raw.HOURS ?? '');
+  if (!Number.isFinite(hours) || hours <= 0) return null;
+
+  const note = String(raw.note ?? raw.Note ?? '').trim().slice(0, 120);
+  const createdCandidate = raw.createdAt ?? raw.created_at ?? raw.CreatedAt ?? '';
+  let createdAt = '';
+  if (String(createdCandidate || '').trim()) {
+    const parsedCreated = new Date(String(createdCandidate));
+    if (!Number.isNaN(parsedCreated.getTime())) {
+      createdAt = parsedCreated.toISOString();
+    }
+  }
+
+  return {
+    date,
+    hours: Math.round(hours * 100) / 100,
+    note,
+    createdAt,
+  };
+}
+
+function trackerEntryFingerprint(entry) {
+  return `${entry.date}|${Number(entry.hours).toFixed(2)}|${String(entry.note || '').trim().toLowerCase()}`;
+}
+
+function readFileText(file) {
+  if (file && typeof file.text === 'function') {
+    return file.text();
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsText(file);
+  });
+}
+
+async function importTrackerEntriesFromFile(file) {
+  if (!file) return;
+  if (!actingTrackerStore) {
+    window.alert('Acting tracker is not available.');
+    if (trackerImportInput) trackerImportInput.value = '';
+    return;
+  }
+
+  try {
+    const text = await readFileText(file);
+    const lowerName = String(file.name || '').toLowerCase();
+    const isJsonType = lowerName.endsWith('.json') || String(file.type || '').toLowerCase().includes('json');
+    const isCsvType = lowerName.endsWith('.csv') || String(file.type || '').toLowerCase().includes('csv');
+
+    let importedRaw = [];
+    if (isJsonType) {
+      importedRaw = parseTrackerJsonText(text);
+    } else if (isCsvType) {
+      importedRaw = parseTrackerCsvText(text);
+    } else {
+      importedRaw = parseTrackerCsvText(text);
+      if (!importedRaw.length) {
+        try {
+          importedRaw = parseTrackerJsonText(text);
+        } catch (err) {
+          importedRaw = [];
+        }
+      }
+    }
+
+    if (!Array.isArray(importedRaw) || !importedRaw.length) {
+      window.alert('No importable entries found. Expected CSV columns: date,hours,note,createdAt or a JSON entries array.');
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const existingFingerprints = new Set(actingEntries.map((entry) => trackerEntryFingerprint(entry)));
+    let added = 0;
+    let duplicates = 0;
+    let invalid = 0;
+    let failed = 0;
+
+    for (const rawEntry of importedRaw) {
+      const safe = normalizeImportedTrackerEntry(rawEntry);
+      if (!safe) {
+        invalid++;
+        continue;
+      }
+
+      const fingerprint = trackerEntryFingerprint(safe);
+      if (existingFingerprints.has(fingerprint)) {
+        duplicates++;
+        continue;
+      }
+      existingFingerprints.add(fingerprint);
+
+      try {
+        await actingTrackerStore.upsert({
+          date: safe.date,
+          hours: safe.hours,
+          note: safe.note,
+          source: 'manual',
+          createdAt: safe.createdAt || nowIso,
+          updatedAt: nowIso,
+        });
+        added++;
+      } catch (err) {
+        failed++;
+        console.error('Failed importing acting tracker row.', err);
+      }
+    }
+
+    await refreshActingAndCalendar();
+    window.alert(`Import complete. Added: ${added}. Duplicates skipped: ${duplicates}. Invalid rows: ${invalid}. Failed writes: ${failed}.`);
+  } catch (err) {
+    console.error('Failed to import tracker file.', err);
+    window.alert('Import failed. Please use CSV or JSON and try again.');
+  } finally {
+    if (trackerImportInput) {
+      trackerImportInput.value = '';
+    }
+  }
+}
+
 function addActingBadge(marksElement, dateKey, tips) {
   const total = getActingTotalForDate(dateKey);
   if (!marksElement || total <= 0) return;
@@ -2411,6 +2638,19 @@ function wireEvents() {
   if (trackerAddEntryBtn) {
     trackerAddEntryBtn.addEventListener('click', () => {
       openActingEntrySheet({ dateIso: currentIsoDate() });
+    });
+  }
+  if (trackerImportBtn) {
+    trackerImportBtn.addEventListener('click', () => {
+      if (!trackerImportInput) return;
+      trackerImportInput.click();
+    });
+  }
+  if (trackerImportInput) {
+    trackerImportInput.addEventListener('change', () => {
+      const file = trackerImportInput.files?.[0] || null;
+      if (!file) return;
+      importTrackerEntriesFromFile(file);
     });
   }
   if (trackerExportCsvBtn) {

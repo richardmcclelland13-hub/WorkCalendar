@@ -1,17 +1,17 @@
-const CACHE_NAME = 'shift-calendar-v18';
+const CACHE_NAME = 'shift-calendar-v19';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
-  './styles.css?v=20260303a',
+  './styles.css?v=20260303b',
   './app.js',
-  './app.js?v=20260303a',
+  './app.js?v=20260303b',
   './tracker.js',
-  './tracker.js?v=20260303a',
+  './tracker.js?v=20260303b',
   './tracker-db.js',
-  './tracker-db.js?v=20260303a',
+  './tracker-db.js?v=20260303b',
   './manifest.json',
-  './manifest.json?v=20260303a',
+  './manifest.json?v=20260303b',
   './icon.svg',
   './icon.png',
   './assets/icons/icon-192.png',

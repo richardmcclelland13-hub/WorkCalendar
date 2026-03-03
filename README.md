@@ -103,8 +103,21 @@ The app now includes an **Acting Hours Tracker** for union-limit planning.
 - Open **Acting Hours Tracker** section from the dashboard or accordion.
 - Filter by union year (default = current) and optional month.
 - Entries are grouped by month and support edit/delete.
+- Import from `CSV` or `JSON` using **Import CSV/JSON**.
 - **Export CSV** columns: `date,hours,note,createdAt`.
 - `Reset Calendar` also clears acting tracker data.
+
+### Tracker import formats
+
+- CSV header (minimum required): `date,hours`
+- Supported CSV columns: `date,hours,note,createdAt`
+- JSON accepted as:
+  - top-level array of entry objects, or
+  - object containing `entries` array
+- Import behavior:
+  - merges into current tracker data
+  - skips duplicates by `date + hours + note`
+  - ignores invalid rows
 
 ## Native Android APK wrapper
 
