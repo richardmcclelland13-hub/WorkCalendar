@@ -216,6 +216,7 @@ let trackerActiveUnionStartYear = null;
 let trackerActiveMonth = 'ALL';
 let actingEditingEntryId = null;
 let trackerImportPreviewData = null;
+let trackerApiLoadPromise = null;
 
 function isAndroidAppWebView() {
   return /ShiftCalendarAndroid\/1\.0/.test(navigator.userAgent || '');
@@ -883,6 +884,39 @@ function trackerApi() {
   return window.ActingHoursTracker || null;
 }
 
+function loadScriptForTrackerRecovery(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = false;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureTrackerApiLoaded() {
+  if (trackerApi()) return true;
+  if (!trackerApiLoadPromise) {
+    trackerApiLoadPromise = (async () => {
+      try {
+        await loadScriptForTrackerRecovery('./tracker-db.js');
+      } catch (err) {
+        console.warn('Tracker DB recovery script load failed.', err);
+      }
+      try {
+        await loadScriptForTrackerRecovery('./tracker.js');
+      } catch (err) {
+        console.warn('Tracker recovery script load failed.', err);
+      }
+      return !!trackerApi();
+    })().finally(() => {
+      trackerApiLoadPromise = null;
+    });
+  }
+  return trackerApiLoadPromise;
+}
+
 function currentIsoDate() {
   const now = new Date();
   return isoDateKey(utcDate(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -896,6 +930,63 @@ function formatActingHours(value) {
   const numeric = Math.round((Number(value) || 0) * 100) / 100;
   if (Number.isInteger(numeric)) return String(numeric);
   return numeric.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function setActingEntryFeedback(message, isError) {
+  if (!actingEntrySubtitle) return;
+  actingEntrySubtitle.textContent = message;
+  actingEntrySubtitle.classList.toggle('error', !!isError);
+}
+
+function isValidDateParts(year, month, day) {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+  if (year < 1900 || year > 3000 || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const parsed = new Date(year, month - 1, day);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day;
+}
+
+function normalizeActingEntryDateInput(rawValue) {
+  const raw = String(rawValue || '').trim();
+  if (!raw) return '';
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (iso) {
+    const year = Number(iso[1]);
+    const month = Number(iso[2]);
+    const day = Number(iso[3]);
+    if (isValidDateParts(year, month, day)) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    return '';
+  }
+
+  const slash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
+  if (slash) {
+    const a = Number(slash[1]);
+    const b = Number(slash[2]);
+    const year = Number(slash[3]);
+    let month = a;
+    let day = b;
+    if (a > 12 && b <= 12) {
+      month = b;
+      day = a;
+    }
+    if (isValidDateParts(year, month, day)) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = parsed.getMonth() + 1;
+    const day = parsed.getDate();
+    if (isValidDateParts(year, month, day)) {
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+  }
+
+  return '';
 }
 
 function resetActingTrackerEntrySheet() {
@@ -1078,14 +1169,14 @@ function openActingEntrySheet(options = {}) {
   if (entry) {
     actingEditingEntryId = entry.id;
     if (actingEntryTitle) actingEntryTitle.textContent = 'Edit Acting Hours';
-    if (actingEntrySubtitle) actingEntrySubtitle.textContent = 'Update or delete this acting hours entry.';
+    setActingEntryFeedback('Update or delete this acting hours entry.', false);
     actingEntryDateInput.value = entry.date || dateIso;
     actingEntryHoursInput.value = formatActingHours(entry.hours);
     actingEntryNoteInput.value = entry.note || '';
     if (actingEntryDeleteBtn) actingEntryDeleteBtn.classList.remove('hidden');
   } else {
     if (actingEntryTitle) actingEntryTitle.textContent = 'Add Acting Hours';
-    if (actingEntrySubtitle) actingEntrySubtitle.textContent = 'Track acting and upgrade hours only.';
+    setActingEntryFeedback('Track acting and upgrade hours only.', false);
     actingEntryDateInput.value = dateIso;
   }
 
@@ -1224,6 +1315,7 @@ async function refreshActingAndCalendar() {
 }
 
 async function initActingTracker() {
+  await ensureTrackerApiLoaded();
   const api = trackerApi();
   if (!api || typeof api.createStore !== 'function') {
     actingTrackerMode = 'unavailable';
@@ -1242,18 +1334,34 @@ async function initActingTracker() {
 }
 
 async function saveActingEntryFromSheet() {
-  if (!actingTrackerStore || !actingEntryDateInput || !actingEntryHoursInput || !actingEntryNoteInput) {
-    window.alert('Acting tracker is not available.');
+  if (!actingEntryDateInput || !actingEntryHoursInput || !actingEntryNoteInput) {
+    setActingEntryFeedback('Acting entry form is unavailable. Close and reopen the sheet.', true);
     return;
   }
-  const date = String(actingEntryDateInput.value || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    window.alert('Please select a valid date.');
+
+  if (!actingTrackerStore) {
+    await ensureTrackerApiLoaded();
+    await initActingTracker();
+  }
+  if (!actingTrackerStore) {
+    setActingEntryFeedback('Tracker storage is not ready. Please retry in a moment.', true);
     return;
   }
+
+  const date = normalizeActingEntryDateInput(actingEntryDateInput.value);
+  if (!date) {
+    setActingEntryFeedback('Please select a valid date.', true);
+    actingEntryDateInput.focus();
+    return;
+  }
+  if (actingEntryDateInput.value !== date) {
+    actingEntryDateInput.value = date;
+  }
+
   const hours = Number(actingEntryHoursInput.value);
   if (!Number.isFinite(hours) || hours <= 0) {
-    window.alert('Hours must be a positive number.');
+    setActingEntryFeedback('Hours must be a positive number.', true);
+    actingEntryHoursInput.focus();
     return;
   }
   const note = String(actingEntryNoteInput.value || '').trim().slice(0, 120);
@@ -1270,11 +1378,12 @@ async function saveActingEntryFromSheet() {
   };
   try {
     await actingTrackerStore.upsert(payload);
+    setActingEntryFeedback('Saved.', false);
     closeActingEntrySheet();
     await refreshActingAndCalendar();
   } catch (err) {
     console.error('Failed saving acting hours.', err);
-    window.alert('Failed to save acting hours. Please try again.');
+    setActingEntryFeedback('Failed to save acting hours. Please try again.', true);
   }
 }
 
@@ -1508,6 +1617,10 @@ function readFileText(file) {
 
 async function importTrackerEntriesFromFile(file) {
   if (!file) return;
+  await ensureTrackerApiLoaded();
+  if (!actingTrackerStore) {
+    await initActingTracker();
+  }
   if (!actingTrackerStore) {
     window.alert('Acting tracker is not available.');
     if (trackerImportInput) trackerImportInput.value = '';

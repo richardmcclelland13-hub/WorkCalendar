@@ -903,6 +903,11 @@ input[type="date"],
   font-size: 13px;
 }
 
+.editor-subtitle.error {
+  color: #9a2a2a;
+  font-weight: 800;
+}
+
 .editor-block,
 .settings-body {
   display: grid;
