@@ -119,6 +119,17 @@ The app now includes an **Acting Hours Tracker** for union-limit planning.
   - skips duplicates by `date + hours + note`
   - ignores invalid rows
 
+### Tracker regression check
+
+Run the lightweight tracker regression script (no dependencies) to verify:
+- union-year boundary handling (`Apr 30` / `May 1`)
+- threshold states (`75%`, `90%`, `100%+`)
+- inclusive union-year totals and month filtering
+
+```powershell
+node .\scripts\verify-tracker-regression.js
+```
+
 ## Native Android APK wrapper
 
 If you want direct APK install (not Play Store), see:
