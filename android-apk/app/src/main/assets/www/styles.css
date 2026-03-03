@@ -45,7 +45,7 @@ body {
   color: var(--ink);
   font-family: "Noto Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   background:
-    radial-gradient(1200px 500px at 50% -120px, rgba(20, 63, 132, 0.15), transparent 70%),
+    radial-gradient(1100px 420px at 50% -140px, rgba(20, 63, 132, 0.11), transparent 72%),
     linear-gradient(160deg, var(--bg-1), var(--bg-2));
 }
 
@@ -54,18 +54,18 @@ body {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(21, 35, 59, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(21, 35, 59, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(21, 35, 59, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(21, 35, 59, 0.025) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
 .app-shell {
   position: relative;
-  max-width: 760px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: calc(16px + var(--safe-top) + var(--vv-offset-top)) 10px calc(72px + var(--safe-bottom));
+  padding: calc(10px + var(--safe-top) + var(--vv-offset-top)) 10px calc(72px + var(--safe-bottom));
   display: grid;
-  gap: 8px;
+  gap: 9px;
 }
 
 .topbar {
@@ -135,14 +135,13 @@ h2 {
 .card {
   background: var(--card);
   border: 1px solid var(--stroke);
-  border-radius: 16px;
-  padding: 9px;
-  box-shadow: 0 8px 26px rgba(18, 44, 81, 0.08);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 6px 18px rgba(18, 44, 81, 0.07);
 }
 
 .controls {
-  display: grid;
-  gap: 8px;
+  background: color-mix(in srgb, var(--card) 82%, #f8fbff);
 }
 
 .inputs-row {
@@ -157,11 +156,11 @@ label {
 }
 
 label span {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
+  letter-spacing: 0.07em;
+  font-weight: 800;
 }
 
 select,
@@ -170,22 +169,22 @@ input[type="date"],
 #noteInput {
   width: 100%;
   border: 1px solid var(--stroke);
-  border-radius: 12px;
+  border-radius: 11px;
   background: var(--card);
   color: var(--ink);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.2;
-  min-height: 44px;
-  padding: 10px 11px;
+  min-height: 42px;
+  padding: 9px 10px;
 }
 
 .btn {
-  border-radius: 12px;
+  border-radius: 11px;
   border: 1px solid transparent;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
-  min-height: 44px;
-  padding: 9px 12px;
+  min-height: 42px;
+  padding: 8px 11px;
 }
 
 .btn.solid {
@@ -218,7 +217,11 @@ input[type="date"],
 
 .month-nav {
   display: grid;
-  gap: 8px;
+  gap: 7px;
+  position: sticky;
+  top: calc(var(--safe-top) + var(--vv-offset-top) + 2px);
+  z-index: 45;
+  backdrop-filter: blur(4px);
 }
 
 .month-nav-head {
@@ -236,13 +239,14 @@ input[type="date"],
 .month-nav-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 7px;
 }
 
 .summary {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  flex-wrap: wrap;
   padding-bottom: 2px;
   -webkit-overflow-scrolling: touch;
 }
@@ -251,8 +255,8 @@ input[type="date"],
   white-space: nowrap;
   border: 1px solid var(--stroke);
   border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 4px 9px;
+  font-size: 11px;
   font-weight: 800;
   background: color-mix(in srgb, var(--card) 80%, #f7fbff);
 }
@@ -281,7 +285,7 @@ input[type="date"],
 
 .acting-dashboard {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background:
     radial-gradient(240px 120px at 90% -10%, rgba(20, 63, 132, 0.15), transparent 70%),
     var(--card);
@@ -296,14 +300,14 @@ input[type="date"],
 
 .acting-dashboard-head h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .acting-percent-badge {
   border-radius: 999px;
   border: 1px solid var(--stroke);
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 4px 9px;
+  font-size: 11px;
   font-weight: 900;
   background: color-mix(in srgb, var(--card) 84%, #f7fbff);
 }
@@ -343,7 +347,7 @@ input[type="date"],
 
 .acting-dashboard-value {
   margin: 0;
-  font-size: clamp(20px, 5.5vw, 28px);
+  font-size: clamp(17px, 4.5vw, 23px);
   font-weight: 900;
   line-height: 1.06;
 }
@@ -352,7 +356,7 @@ input[type="date"],
   border-radius: 999px;
   border: 1px solid var(--stroke);
   background: color-mix(in srgb, var(--card) 82%, #f3f8ff);
-  height: 16px;
+  height: 13px;
   overflow: hidden;
 }
 
@@ -379,18 +383,20 @@ input[type="date"],
 
 .acting-dashboard-meta {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
 }
 
 .acting-dashboard-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 7px;
 }
 
 .calendar {
-  padding: 7px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--stroke) 86%, #9fb5d3);
+  box-shadow: 0 10px 22px rgba(12, 35, 68, 0.1);
 }
 
 .weekdays,
@@ -401,11 +407,12 @@ input[type="date"],
 }
 
 .weekdays span {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--muted);
   text-align: center;
   font-weight: 800;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .grid {
@@ -413,13 +420,13 @@ input[type="date"],
 }
 
 .cell {
-  min-height: 88px;
-  border-radius: 12px;
+  min-height: 76px;
+  border-radius: 11px;
   border: 1px solid rgba(11, 24, 41, 0.08);
-  padding: 6px 5px 5px;
+  padding: 5px 4px 4px;
   display: grid;
   grid-template-rows: auto auto 1fr;
-  gap: 5px;
+  gap: 4px;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -462,31 +469,33 @@ input[type="date"],
 }
 
 .num {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
 }
 
 .tag {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 
 .marks {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   align-content: flex-start;
+  max-height: 33px;
+  overflow: hidden;
 }
 
 .mark {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
   line-height: 1;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 3px 6px;
+  padding: 2px 5px;
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -596,10 +605,24 @@ input[type="date"],
 .accordion summary {
   list-style: none;
   cursor: pointer;
-  padding: 13px 12px;
-  font-size: 14px;
+  padding: 11px 12px;
+  font-size: 13px;
   font-weight: 900;
   border-bottom: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.accordion summary::after {
+  content: '+';
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.accordion[open] summary::after {
+  content: '\2212';
 }
 
 .accordion summary::-webkit-details-marker { display: none; }
@@ -668,7 +691,7 @@ input[type="date"],
 
 .tracker-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -1060,9 +1083,9 @@ input[type="date"],
   background: color-mix(in srgb, var(--card) 92%, #ffffff);
   color: var(--ink);
   border-radius: 999px;
-  min-height: 44px;
+  min-height: 42px;
   padding: 0 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.2);
 }
@@ -1089,8 +1112,25 @@ input[type="date"],
 }
 
 @media (max-width: 620px) {
+  .app-shell {
+    gap: 8px;
+    padding: calc(8px + var(--safe-top) + var(--vv-offset-top)) 8px calc(68px + var(--safe-bottom));
+  }
+
+  .calendar {
+    padding: 7px;
+  }
+
+  .cell {
+    min-height: 72px;
+  }
+
+  .marks {
+    max-height: 30px;
+  }
+
   .cell.mutual {
-    min-height: 126px;
+    min-height: 118px;
   }
 
   .cell.mutual .tag {
@@ -1135,8 +1175,8 @@ input[type="date"],
 
 @media (min-width: 760px) {
   .app-shell {
-    padding: calc(18px + var(--safe-top) + var(--vv-offset-top)) 18px calc(80px + var(--safe-bottom));
-    gap: 12px;
+    padding: calc(12px + var(--safe-top) + var(--vv-offset-top)) 16px calc(80px + var(--safe-bottom));
+    gap: 10px;
   }
 
   .tools {

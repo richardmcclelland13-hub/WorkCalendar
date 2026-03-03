@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Suncor Shift Calendar</title>
   <meta name="theme-color" content="#183153">
-  <link rel="manifest" href="manifest.json?v=20260303f">
-  <link rel="stylesheet" href="styles.css?v=20260303f">
+  <link rel="manifest" href="manifest.json?v=20260303g">
+  <link rel="stylesheet" href="styles.css?v=20260303g">
 </head>
 <body>
   <div class="bg-grid"></div>
@@ -48,6 +48,13 @@
       </div>
     </section>
 
+    <section class="calendar card">
+      <div class="weekdays" id="weekdaysRow"></div>
+      <div id="calendarGrid" class="grid" aria-live="polite"></div>
+    </section>
+
+    <section class="summary card" id="monthSummary" aria-live="polite"></section>
+
     <section id="actingAlertBanner" class="acting-alert hidden" role="status" aria-live="polite"></section>
 
     <section class="card acting-dashboard" id="actingDashboardCard" aria-live="polite">
@@ -76,18 +83,6 @@
       </div>
     </section>
 
-    <section class="summary card" id="monthSummary" aria-live="polite"></section>
-
-    <details class="card accordion">
-      <summary>Attendance</summary>
-      <section class="attendance" id="attendanceSummary" aria-live="polite"></section>
-    </details>
-
-    <details class="card accordion">
-      <summary>Stats Dashboard</summary>
-      <section class="stats" id="statsSummary" aria-live="polite"></section>
-    </details>
-
     <details class="card accordion" id="trackerDetails">
       <summary>Acting Hours Tracker</summary>
       <section class="tracker" id="trackerScreen" aria-live="polite">
@@ -112,10 +107,15 @@
       </section>
     </details>
 
-    <section class="calendar card">
-      <div class="weekdays" id="weekdaysRow"></div>
-      <div id="calendarGrid" class="grid" aria-live="polite"></div>
-    </section>
+    <details class="card accordion">
+      <summary>Attendance</summary>
+      <section class="attendance" id="attendanceSummary" aria-live="polite"></section>
+    </details>
+
+    <details class="card accordion">
+      <summary>Stats Dashboard</summary>
+      <section class="stats" id="statsSummary" aria-live="polite"></section>
+    </details>
 
     <details class="card accordion">
       <summary>Tools & Backup</summary>
@@ -289,8 +289,8 @@
     </div>
   </section>
 
-  <script src="tracker-db.js?v=20260303f"></script>
-  <script src="tracker.js?v=20260303f"></script>
-  <script src="app.js?v=20260303f"></script>
+  <script src="tracker-db.js?v=20260303g"></script>
+  <script src="tracker.js?v=20260303g"></script>
+  <script src="app.js?v=20260303g"></script>
 </body>
 </html>
