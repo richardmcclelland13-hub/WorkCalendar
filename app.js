@@ -989,6 +989,27 @@ function normalizeActingEntryDateInput(rawValue) {
   return '';
 }
 
+function formatTrackerEntryDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+  try {
+    return date.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  } catch (err) {
+    const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekday = weekdayNames[date.getUTCDay()];
+    const month = monthNames[date.getUTCMonth()];
+    const day = date.getUTCDate();
+    const year = date.getUTCFullYear();
+    return `${weekday}, ${month} ${day}, ${year}`;
+  }
+}
+
 function resetActingTrackerEntrySheet() {
   actingEditingEntryId = null;
   if (actingEntryDateInput) actingEntryDateInput.value = '';
@@ -1224,9 +1245,7 @@ function renderTrackerList(entries) {
       rowHead.className = 'tracker-item-head';
 
       const date = api.parseIsoDate(entry.date);
-      const dateText = date
-        ? date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-        : entry.date;
+      const dateText = date ? formatTrackerEntryDate(date) : entry.date;
 
       const dateNode = document.createElement('span');
       dateNode.className = 'tracker-item-date';

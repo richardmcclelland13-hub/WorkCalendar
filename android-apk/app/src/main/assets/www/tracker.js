@@ -47,6 +47,22 @@
     return n.toFixed(2).replace(/\.?0+$/, '');
   }
 
+  function safeMonthYearLabel(dateUtc) {
+    try {
+      return dateUtc.toLocaleDateString(undefined, {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
+      });
+    } catch (err) {
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+      ];
+      return `${monthNames[dateUtc.getUTCMonth()]} ${dateUtc.getUTCFullYear()}`;
+    }
+  }
+
   function unionYearForDate(inputDate) {
     const date = dateOnlyUtc(inputDate) || dateOnlyUtc(new Date());
     const year = date.getUTCFullYear();
@@ -175,11 +191,7 @@
     for (let i = 0; i < 12; i++) {
       const current = utcDate(start.getUTCFullYear(), start.getUTCMonth() + i, 1);
       const value = `${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2, '0')}`;
-      const label = current.toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-      });
+      const label = safeMonthYearLabel(current);
       months.push({ value, label });
     }
     return months;
@@ -207,9 +219,7 @@
       const monthKey = entry.date.slice(0, 7);
       if (!groups.has(monthKey)) {
         const date = parseIsoDate(`${monthKey}-01`);
-        const title = date
-          ? date.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })
-          : monthKey;
+        const title = date ? safeMonthYearLabel(date) : monthKey;
         groups.set(monthKey, { key: monthKey, title, entries: [] });
       }
       groups.get(monthKey).entries.push(entry);

@@ -11,6 +11,8 @@ tasks.register('syncWebAssets', Copy) {
     include 'index.html'
     include 'styles.css'
     include 'app.js'
+    include 'tracker.js'
+    include 'tracker-db.js'
     include 'manifest.json'
     include 'icon.svg'
     include 'icon.png'
