@@ -96,6 +96,9 @@ The app now includes an **Acting Hours Tracker** for union-limit planning.
 ### Day + Calendar integration
 
 - Day editor includes `Acting Hours logged: X` and **Add Acting Hours for this day**.
+- If you save a day with time code **Acting Hours Worked**, the tracker auto-logs an acting entry for that date.
+  - Default auto amount is `12` hours.
+  - Auto row note is `[Auto] Added from day entry: Acting Hours Worked`.
 - Calendar cells display an acting badge (for example `A: 10.5`) on days with logged acting entries.
 
 ### Tracker screen

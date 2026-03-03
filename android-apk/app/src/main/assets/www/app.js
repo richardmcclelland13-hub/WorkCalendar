@@ -56,6 +56,8 @@ const DEFAULT_QUICK_ENTRY_TYPES = ['NONE', 'OVERTIME', 'MUTUAL_SICK'];
 const LOCKED_QUICK_ENTRY_TYPES = ['NONE', 'OVERTIME', 'MUTUAL_SICK'];
 const RESET_BUTTON_DEFAULT_TEXT = 'Reset Calendar';
 const RESET_BUTTON_CONFIRM_TEXT = 'Tap Again to Confirm';
+const AUTO_ACTING_HOURS = 12;
+const AUTO_ACTING_NOTE = '[Auto] Added from day entry: Acting Hours Worked';
 const SHIFT_THEMES = {
   I2: { day: '#c0d098', night: '#709038' },
   J2: { day: '#88b0e0', night: '#103058' },
@@ -1904,20 +1906,66 @@ function closeEditor() {
   renderActingDaySummary();
 }
 
-function clearCurrentOverride() {
+function autoActingEntryId(dateIso) {
+  return `auto-acting-${dateIso}`;
+}
+
+async function ensureActingTrackerStoreReady() {
+  if (actingTrackerStore) return true;
+  await ensureTrackerApiLoaded();
+  await initActingTracker();
+  return !!actingTrackerStore;
+}
+
+async function syncAutoActingEntryForDate(dateIso, entryTypeValue) {
+  if (!dateIso) return;
+  const shouldAutoLog = entryTypeValue === 'ACTING_HOURS_WORKED';
+
+  const ready = await ensureActingTrackerStoreReady();
+  if (!ready) return;
+
+  const autoId = autoActingEntryId(dateIso);
+  const existingAuto = actingEntries.find((entry) => entry.id === autoId);
+
+  try {
+    if (shouldAutoLog) {
+      const nowIso = new Date().toISOString();
+      const safeHours = Number(existingAuto?.hours) > 0 ? Number(existingAuto.hours) : AUTO_ACTING_HOURS;
+      await actingTrackerStore.upsert({
+        id: autoId,
+        date: dateIso,
+        hours: safeHours,
+        note: existingAuto?.note || AUTO_ACTING_NOTE,
+        source: 'manual',
+        createdAt: existingAuto?.createdAt || nowIso,
+        updatedAt: nowIso,
+      });
+    } else if (existingAuto) {
+      await actingTrackerStore.remove(autoId);
+    }
+    await reloadActingEntries({ skipRender: true });
+  } catch (err) {
+    console.error('Failed syncing auto acting entry from day editor.', err);
+  }
+}
+
+async function clearCurrentOverride() {
   if (!editingDateIso) return;
+  const targetIso = editingDateIso;
   const map = shiftOverrides(state.shift);
-  delete map[editingDateIso];
+  delete map[targetIso];
   if (Object.keys(map).length === 0) {
     delete overridesByShift[state.shift];
   }
   saveOverrides();
+  await syncAutoActingEntryForDate(targetIso, 'NONE');
   closeEditor();
   renderMonth();
 }
 
-function saveCurrentOverride() {
+async function saveCurrentOverride() {
   if (!editingDateIso) return;
+  const targetIso = editingDateIso;
 
   const stateValue = selectedOverrideState;
   const entryTypeValue = selectedEntryType;
@@ -1926,9 +1974,9 @@ function saveCurrentOverride() {
 
   const map = shiftOverrides(state.shift);
   if (isDefault) {
-    delete map[editingDateIso];
+    delete map[targetIso];
   } else {
-    map[editingDateIso] = {
+    map[targetIso] = {
       state: stateValue,
       entryType: entryTypeValue,
       note: noteValue,
@@ -1939,6 +1987,7 @@ function saveCurrentOverride() {
     delete overridesByShift[state.shift];
   }
   saveOverrides();
+  await syncAutoActingEntryForDate(targetIso, entryTypeValue);
   closeEditor();
   renderMonth();
 }
