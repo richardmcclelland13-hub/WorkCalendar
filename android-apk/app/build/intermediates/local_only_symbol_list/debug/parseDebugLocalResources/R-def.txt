@@ -1,0 +1,29 @@
+R_DEF: Internal format may change without notice
+local
+color colorOnPrimary
+color colorPrimary
+color colorPrimaryDark
+drawable widget_bg
+drawable widget_chip
+drawable widget_status_day
+drawable widget_status_night
+drawable widget_status_off
+id webview
+id widgetDate
+id widgetHint
+id widgetRoot
+id widgetShift
+id widgetStatus
+id widgetTitle
+layout activity_main
+layout widget_shift_calendar
+mipmap ic_launcher
+mipmap ic_launcher_round
+string app_name
+string widget_description
+string widget_hint
+string widget_title
+style Theme.ShiftCalendar
+xml data_extraction_rules
+xml network_security_config
+xml shift_calendar_widget_info

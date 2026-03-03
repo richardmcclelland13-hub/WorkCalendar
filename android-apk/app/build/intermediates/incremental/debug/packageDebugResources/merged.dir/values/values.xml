@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorPrimary">#183153</color>
+    <color name="colorPrimaryDark">#0F2D57</color>
+    <string name="app_name">Suncor Shift Calendar</string>
+    <string name="widget_description">Shows today\'s shift and status</string>
+    <string name="widget_hint">Tap shift badge to cycle I2/J2/K2/L2</string>
+    <string name="widget_title">Suncor Shift Widget</string>
+    <style name="Theme.ShiftCalendar" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorOnPrimary">@color/colorOnPrimary</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+    </style>
+</resources>

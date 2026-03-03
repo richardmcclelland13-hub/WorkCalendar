@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Suncor Shift Calendar</title>
+  <meta name="theme-color" content="#183153">
+  <link rel="manifest" href="manifest.json?v=20260303a">
+  <link rel="stylesheet" href="styles.css?v=20260303a">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <main class="app-shell">
+    <section class="controls card">
+      <div class="inputs-row">
+        <label>
+          <span>Shift</span>
+          <select id="shiftSelect">
+            <option value="I2">I2</option>
+            <option value="J2">J2</option>
+            <option value="K2">K2</option>
+            <option value="L2">L2</option>
+            <option value="MUTI2">MUTI2</option>
+            <option value="MUTJ2">MUTJ2</option>
+            <option value="MUTK2">MUTK2</option>
+            <option value="MUTL2">MUTL2</option>
+          </select>
+        </label>
+        <label>
+          <span>Year</span>
+          <select id="yearSelect" aria-label="Year"></select>
+        </label>
+      </div>
+    </section>
+
+    <section class="month-nav card">
+      <div class="month-nav-head">
+        <h2 id="monthLabel" aria-live="polite"></h2>
+        <label class="month-picker">
+          <span class="sr-only">Month</span>
+          <select id="monthSelect" aria-label="Month"></select>
+        </label>
+      </div>
+      <div class="month-nav-actions">
+        <button id="prevMonthBtn" class="btn ghost" type="button">Prev</button>
+        <button id="todayBtn" class="btn ghost" type="button">Today</button>
+        <button id="nextMonthBtn" class="btn ghost" type="button">Next</button>
+      </div>
+    </section>
+
+    <section id="actingAlertBanner" class="acting-alert hidden" role="status" aria-live="polite"></section>
+
+    <section class="card acting-dashboard" id="actingDashboardCard" aria-live="polite">
+      <div class="acting-dashboard-head">
+        <h3>Acting Hours (Union Year)</h3>
+        <span id="actingPercentBadge" class="acting-percent-badge">0%</span>
+      </div>
+      <div class="acting-dashboard-metrics">
+        <div>
+          <p class="acting-dashboard-label">Used</p>
+          <p class="acting-dashboard-value"><span id="actingUsedValue">0</span> / 1040</p>
+        </div>
+        <div>
+          <p class="acting-dashboard-label">Remaining</p>
+          <p class="acting-dashboard-value" id="actingRemainingValue">1040</p>
+        </div>
+      </div>
+      <div class="acting-progress" aria-hidden="true">
+        <span id="actingProgressFill"></span>
+      </div>
+      <p class="acting-dashboard-meta" id="actingUnionYearRange">Union Year: --</p>
+      <p class="acting-dashboard-meta" id="actingPaceGuidance">Safe weekly pace: --</p>
+      <div class="acting-dashboard-actions">
+        <button id="actingAddBtn" class="btn solid" type="button">Add Acting Hours</button>
+        <button id="actingOpenTrackerBtn" class="btn ghost" type="button">Open Tracker</button>
+      </div>
+    </section>
+
+    <section class="summary card" id="monthSummary" aria-live="polite"></section>
+
+    <details class="card accordion">
+      <summary>Attendance</summary>
+      <section class="attendance" id="attendanceSummary" aria-live="polite"></section>
+    </details>
+
+    <details class="card accordion">
+      <summary>Stats Dashboard</summary>
+      <section class="stats" id="statsSummary" aria-live="polite"></section>
+    </details>
+
+    <details class="card accordion" id="trackerDetails">
+      <summary>Acting Hours Tracker</summary>
+      <section class="tracker" id="trackerScreen" aria-live="polite">
+        <div class="tracker-controls">
+          <label>
+            <span>Union Year</span>
+            <select id="trackerUnionYearFilter" aria-label="Tracker Union Year"></select>
+          </label>
+          <label>
+            <span>Month</span>
+            <select id="trackerMonthFilter" aria-label="Tracker Month Filter"></select>
+          </label>
+        </div>
+        <div class="tracker-actions">
+          <button id="trackerAddEntryBtn" class="btn ghost" type="button">Add Entry</button>
+          <button id="trackerExportCsvBtn" class="btn ghost" type="button">Export CSV</button>
+        </div>
+        <p id="trackerFilterMeta" class="tracker-meta">No entries yet.</p>
+        <div id="trackerList" class="tracker-list"></div>
+      </section>
+    </details>
+
+    <section class="calendar card">
+      <div class="weekdays" id="weekdaysRow"></div>
+      <div id="calendarGrid" class="grid" aria-live="polite"></div>
+    </section>
+
+    <details class="card accordion">
+      <summary>Tools & Backup</summary>
+      <section class="tools">
+        <label>
+          <span>Jump To Date</span>
+          <input id="jumpDateInput" type="date">
+        </label>
+        <button id="jumpDateBtn" class="btn ghost" type="button">Go</button>
+        <button id="downloadBtn" class="btn ghost" type="button">Download ICS</button>
+        <button id="exportEditsBtn" class="btn ghost" type="button">Export Edits</button>
+        <label class="btn ghost file-btn" for="importEditsInput">Import Edits</label>
+        <input id="importEditsInput" type="file" accept="application/json" class="hidden-file">
+        <button id="clearAllEditsBtn" class="btn ghost danger" type="button">Clear All Edits</button>
+      </section>
+    </details>
+
+    <details class="card accordion">
+      <summary>Color Key</summary>
+      <section class="legend">
+        <p><i class="chip day"></i> Day Shift</p>
+        <p><i class="chip night"></i> Night Shift</p>
+        <p><i class="chip off"></i> Off</p>
+        <p><i class="chip holiday"></i> Holiday</p>
+        <p><i class="chip payday"></i> Payday</p>
+        <p><i class="chip training"></i> Training</p>
+        <p><i class="chip overtime"></i> Overtime</p>
+      </section>
+    </details>
+  </main>
+
+  <div id="editorBackdrop" class="editor-backdrop hidden"></div>
+  <section id="dayEditor" class="day-editor hidden" aria-modal="true" role="dialog">
+    <header class="editor-head">
+      <h3 id="editorTitle">Edit Day</h3>
+      <button id="closeEditorBtn" class="btn ghost compact" type="button">Close</button>
+    </header>
+
+    <p id="editorSubtitle" class="editor-subtitle"></p>
+
+    <div class="editor-block">
+      <p class="editor-label">Overtime / Sick</p>
+      <div id="quickEntryOptions" class="choice-row quick-row"></div>
+      <div id="quickAddPanel" class="quick-add-panel hidden">
+        <label for="quickAddSelect" class="editor-label">Add Favorite Time Code</label>
+        <div class="quick-add-actions">
+          <select id="quickAddSelect" aria-label="Add Favorite Time Code"></select>
+          <button id="quickAddConfirmBtn" class="btn ghost compact" type="button">Add</button>
+          <button id="quickAddCancelBtn" class="btn ghost compact" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="editor-block">
+      <label for="entryTypeSelect" class="editor-label">Time Entry / Absence (Full List)</label>
+      <select id="entryTypeSelect" aria-label="Time Entry or Absence">
+        <option value="NONE">None</option>
+      </select>
+    </div>
+
+    <div class="editor-block">
+      <details id="shiftOverrideDetails" class="editor-advanced">
+        <summary>Shift Override</summary>
+        <div>
+          <div id="stateOptions" class="choice-row">
+            <button type="button" class="choice-btn" data-group="state" data-value="DEFAULT">Default</button>
+            <button type="button" class="choice-btn" data-group="state" data-value="DAY">Day</button>
+            <button type="button" class="choice-btn" data-group="state" data-value="NIGHT">Night</button>
+            <button type="button" class="choice-btn" data-group="state" data-value="OFF">Off</button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="editor-block">
+      <label for="noteInput" class="editor-label">Note (optional)</label>
+      <input id="noteInput" type="text" maxlength="50" placeholder="Example: Forklift refresher">
+    </div>
+
+    <div class="editor-block">
+      <p class="editor-label">Acting Hours Tracker</p>
+      <p id="actingDaySummary" class="acting-day-summary">Acting Hours logged: 0</p>
+      <button id="actingDayAddBtn" class="btn ghost" type="button">Add Acting Hours for this day</button>
+    </div>
+
+    <footer class="editor-actions">
+      <button id="clearDayBtn" class="btn ghost" type="button">Clear</button>
+      <button id="saveDayBtn" class="btn solid" type="button">Save</button>
+    </footer>
+  </section>
+
+  <section id="actingEntrySheet" class="acting-entry-sheet hidden" aria-modal="true" role="dialog">
+    <header class="editor-head">
+      <h3 id="actingEntryTitle">Add Acting Hours</h3>
+      <button id="actingEntryCloseBtn" class="btn ghost compact" type="button">Close</button>
+    </header>
+
+    <p id="actingEntrySubtitle" class="editor-subtitle">Track acting and upgrade hours only.</p>
+
+    <div class="editor-block">
+      <label>
+        <span>Date</span>
+        <input id="actingEntryDateInput" type="date" aria-label="Acting Entry Date">
+      </label>
+      <label>
+        <span>Hours</span>
+        <input id="actingEntryHoursInput" type="number" min="0.01" step="0.25" placeholder="0.00" aria-label="Acting Entry Hours">
+      </label>
+      <label>
+        <span>Note (optional)</span>
+        <input id="actingEntryNoteInput" type="text" maxlength="120" placeholder="Example: Upgrade coverage" aria-label="Acting Entry Note">
+      </label>
+    </div>
+
+    <footer class="acting-entry-actions">
+      <button id="actingEntryDeleteBtn" class="btn ghost danger hidden" type="button">Delete</button>
+      <button id="actingEntrySaveBtn" class="btn solid" type="button">Save Acting Hours</button>
+    </footer>
+  </section>
+
+  <button id="settingsBtn" class="settings-fab" type="button" aria-controls="settingsPanel">Settings</button>
+  <section id="settingsPanel" class="settings-panel hidden" aria-modal="true" role="dialog">
+    <header class="settings-head">
+      <h3>Settings</h3>
+      <button id="closeSettingsBtn" class="btn ghost compact" type="button">Close</button>
+    </header>
+    <div class="settings-body">
+      <label>
+        <span>Theme</span>
+        <select id="themeSelect" aria-label="Theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <label>
+        <span>Week Starts On</span>
+        <select id="weekStartSelect" aria-label="Week Start">
+          <option value="sun">Sunday</option>
+          <option value="mon">Monday</option>
+        </select>
+      </label>
+      <label>
+        <span>Shift Label Style</span>
+        <select id="shiftLabelStyleSelect" aria-label="Shift Label Style">
+          <option value="long">Long (Day/Night)</option>
+          <option value="short">Short (D/N)</option>
+        </select>
+      </label>
+      <label>
+        <span>Anniversary Start Date</span>
+        <input id="anniversaryDateInput" type="date" aria-label="Anniversary Start Date">
+      </label>
+      <button id="clearAnniversaryBtn" class="btn ghost" type="button">Clear Anniversary</button>
+      <button id="resetCalendarBtn" class="btn ghost danger" type="button">Reset Calendar</button>
+    </div>
+  </section>
+
+  <script src="tracker-db.js?v=20260303a"></script>
+  <script src="tracker.js?v=20260303a"></script>
+  <script src="app.js?v=20260303a"></script>
+</body>
+</html>
