@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.OnBackPressedCallback
@@ -44,6 +45,13 @@ class MainActivity : AppCompatActivity() {
         settings.allowUniversalAccessFromFileURLs = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.safeBrowsingEnabled = true
+        }
+        if (BuildConfig.DEBUG) {
+            // Prevent stale JS/CSS during Android Studio debug loops.
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            webView.clearCache(true)
+            webView.clearHistory()
+            WebStorage.getInstance().deleteAllData()
         }
 
         val cookies = CookieManager.getInstance()
